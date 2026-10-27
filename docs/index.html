@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+ <head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1" name="viewport"/>
+  <title>
+   Long–Short Lane Planning · Research recreation
+  </title>
+  <meta content="An independent, runnable recreation of A Long-Short-Term Mixed-Integer Formulation for Highway Lane Change Planning, with interactive car scenes and transparent synthetic evaluations." name="description"/>
+  <meta content="#ffffff" name="theme-color"/>
+  <meta content="A Long-Short-Term Mixed-Integer Formulation for Highway Lane Change Planning" property="og:title"/>
+  <meta content="Interactive research recreation · runnable planner · synthetic car evaluation" property="og:description"/>
+  <meta content="https://RudolfReiter.github.io/highway-lane-planning/assets/driving-scene.png" property="og:image"/>
+  <link href="assets/favicon.svg" rel="icon" type="image/svg+xml"/>
+  <link href="styles.css" rel="stylesheet"/>
+ </head>
+ <body>
+  <header class="header wrap">
+   <a class="wordmark" href="#">
+    Long–Short Lane Planning
+    <span>
+     Research recreation
+    </span>
+   </a>
+   <nav aria-label="Main navigation">
+    <a href="#simulation">
+     Simulation
+    </a>
+    <a href="#research">
+     Research
+    </a>
+    <a href="#results">
+     Results
+    </a>
+    <a href="#reproduce">
+     Code
+    </a>
+   </nav>
+  </header>
+  <main>
+   <section class="hero wrap">
+    <span class="badge">
+     Published in IEEE Transactions on Intelligent Vehicles · TIV 2024
+    </span>
+    <h1>
+     A Long-Short-Term Mixed-Integer Formulation for Highway Lane Change Planning
+    </h1>
+    <p class="authors">
+     Rudolf Reiter · Armin Nurkanović · Daniele Bernardini · Moritz Diehl · Alberto Bemporad
+    </p>
+    <p class="intro">
+     A lane change is part of a longer journey. Explore how a detailed short-term motion plan can account for gaps several lanes ahead through continuous transition times and positions.
+    </p>
+    <div class="actions">
+     <a class="button primary" href="#simulation">
+      Explore the car example
+     </a>
+     <a class="button" href="https://publications.syscop.de/Reiter2024.pdf">
+      Read the paper ↗
+     </a>
+     <a class="button" href="https://github.com/RudolfReiter/highway-lane-planning">
+      GitHub repository ↗
+     </a>
+     <a class="button" href="https://doi.org/10.1109/TIV.2024.3398805">
+      Publication DOI ↗
+     </a>
+    </div>
+    <div class="notice">
+     <strong>
+      Recreated implementation · not the original repository.
+     </strong>
+     This independent implementation makes the core planning ideas runnable. Every result below comes from a new synthetic experiment; it is not an original paper result.
+    </div>
+   </section>
+   <section class="section wrap" id="simulation">
+    <div class="section-head">
+     <h2>
+      See how a future gap changes the next six seconds
+     </h2>
+     <p>
+      The blue car follows the selected short-term plan. The orange ghost shows the short-term-first baseline at the same elapsed time. Gray cars follow constant-speed traffic predictions.
+     </p>
+    </div>
+    <ol class="steps">
+     <li>
+      <strong>
+       1. Select a traffic scene
+      </strong>
+      The car starts in lane 1; its eventual goal is lane 3.
+     </li>
+     <li>
+      <strong>
+       2. Compare the first maneuver
+      </strong>
+      Watch two plans over the same fixed six-second interval.
+     </li>
+     <li>
+      <strong>
+       3. Inspect the future transition
+      </strong>
+      The time–position plot shows the coarse goal-lane gap decision.
+     </li>
+    </ol>
+    <div class="toolbar">
+     <div class="field">
+      <label for="scenario">
+       Scene
+      </label>
+      <select id="scenario">
+      </select>
+     </div>
+     <div class="field">
+      <label for="strategy">
+       Planner setting
+      </label>
+      <select id="strategy">
+      </select>
+     </div>
+     <div aria-label="Camera view" class="view-buttons" role="group">
+      <button aria-pressed="true" class="active" id="overview">
+       Overview
+      </button>
+      <button aria-pressed="false" id="follow">
+       Smooth follow
+      </button>
+     </div>
+    </div>
+    <div class="scene">
+     <canvas aria-label="Interactive projected driving scene. Use the controls below to play, pause, or inspect time." id="driving-canvas">
+     </canvas>
+     <div class="scene-top">
+      <span id="scene-title">
+      </span>
+      <span id="scene-method">
+      </span>
+     </div>
+     <div class="scene-bottom">
+      <span class="blue">
+       Blue · selected plan
+      </span>
+      <span class="orange">
+       Orange · comparison ghost
+      </span>
+      <span id="live-state">
+      </span>
+     </div>
+    </div>
+    <div class="controls">
+     <button aria-pressed="false" class="button primary" id="play">
+      Play
+     </button>
+     <button class="button" id="restart">
+      Restart
+     </button>
+     <label class="sr-only" for="timeline">
+      Elapsed time
+     </label>
+     <input id="timeline" max="6" min="0" step="0.01" type="range" value="0"/>
+     <span class="clock" id="clock">
+     </span>
+     <label class="sr-only" for="speed">
+      Playback speed
+     </label>
+     <select id="speed">
+      <option value=".5">
+       0.5×
+      </option>
+      <option selected="" value="1">
+       1×
+      </option>
+      <option value="2">
+       2×
+      </option>
+     </select>
+    </div>
+    <div class="toggles">
+     <label>
+      <input checked="" id="ghost" type="checkbox"/>
+      Show comparison ghost
+     </label>
+     <label hidden="">
+      <input id="corridor" type="checkbox"/>
+      Show selected corridor
+     </label>
+     <span>
+      Starts paused · no automatic looping
+     </span>
+    </div>
+    <p class="scene-description" id="scenario-description">
+    </p>
+    <div class="metrics" id="metrics">
+    </div>
+    <div class="charts">
+     <article class="chart">
+      <h3>
+       Future lane transition in time and position
+      </h3>
+      <p>
+       Solid blue covers the detailed six-second trajectory. The blue point is the planned lane-2-to-lane-3 transition; the dotted connector is a coarse approximation.
+      </p>
+      <svg aria-label="Trajectory and future lane transition in time and position" id="path-chart" role="img">
+      </svg>
+      <div class="chart-note">
+       Purple lines: goal-lane vehicle predictions. Orange: short-term-first baseline. The future transition is not a simulated or executed second lane change.
+      </div>
+     </article>
+     <article class="chart">
+      <h3>
+       Planned speed over time
+      </h3>
+      <p>
+       Blue: selected plan. Orange: comparison. The vertical cursor follows the car at the same elapsed time.
+      </p>
+      <svg aria-label="Speed in metres per second over elapsed time" id="speed-chart" role="img">
+      </svg>
+      <div class="chart-note">
+       Slowing earlier can improve access to a future gap, while increasing speed-tracking error.
+      </div>
+     </article>
+    </div>
+    <div class="decisions" id="decisions">
+    </div>
+   </section>
+   <section class="section wrap" id="research">
+    <div class="section-head">
+     <h2>
+      The research behind the demonstration
+     </h2>
+     <p>
+      The paper couples detailed short-horizon dynamics with a compact long-horizon representation of lane transitions. The implementation below preserves that structure with the simplifications stated here.
+     </p>
+    </div>
+    <div class="method-grid">
+     <article>
+      <span class="step-no">
+       01
+      </span>
+      <h3>
+       Detailed short-term motion
+      </h3>
+      <p>
+       A four-state point-mass model describes longitudinal and lateral position and velocity. Piecewise-constant acceleration gives exact discrete dynamics.
+      </p>
+      <div class="equation">
+       x[k+1] = A x[k] + B u[k]
+      </div>
+     </article>
+     <article>
+      <span class="step-no">
+       02
+      </span>
+      <h3>
+       Continuous future transitions
+      </h3>
+      <p>
+       Gap choices determine linear constraints on a future transition time and position. A reachable cone and a centering radius approximate later motion.
+      </p>
+      <div class="equation">
+       transition = (time, position)
+      </div>
+     </article>
+     <article>
+      <span class="step-no">
+       03
+      </span>
+      <h3>
+       Optimize the coupled plan
+      </h3>
+      <p>
+       The future transition depends on the short-term trajectory within each QP. Explicitly enumerating discrete choices replaces a general-purpose MIQP search.
+      </p>
+      <div class="equation">
+       short trajectory ↔ future gap
+      </div>
+     </article>
+    </div>
+    <div class="limitations">
+     <strong>
+      What this recreation does and does not recover
+     </strong>
+     This is a simplified recreation, not the original LSTMP repository. Gap choices and three first-crossing times are enumerated; the second transition remains continuous. The study uses constant-speed traffic, conservative short-term corridors, and a simplified reachability cone. It omits SUMO, CommonRoad vehicle dynamics, the low-level NMPC, interactive braking, virtual no-transition gaps, and the original full MIQP formulation. See
+     <a href="assets/source.zip">
+      REPRODUCTION.md in the source archive
+     </a>
+     for the equation-to-code mapping and evaluation protocol.
+    </div>
+   </section>
+   <section class="section wrap" id="results">
+    <div class="section-head">
+     <h2>
+      Evaluation on synthetic car examples
+     </h2>
+     <p>
+      These tables are populated from the exact solver outputs used by the animation. Download the
+      <a href="data/summary.json">
+       summary data
+      </a>
+      or the
+      <a href="data/experiment.json">
+       full trajectories
+      </a>
+      .
+     </p>
+    </div>
+    <div class="table-wrap">
+     <table>
+      <caption class="sr-only">
+       Recreated synthetic evaluation results
+      </caption>
+      <thead>
+       <tr>
+        <th scope="col">
+         Scene
+        </th>
+        <th scope="col">
+         Setting
+        </th>
+        <th scope="col">
+         Future transition
+        </th>
+        <th scope="col">
+         Speed RMSE
+        </th>
+        <th scope="col">
+         Combined objective
+        </th>
+        <th scope="col">
+         Detailed path
+        </th>
+       </tr>
+      </thead>
+      <tbody id="results-body">
+      </tbody>
+     </table>
+    </div>
+    <div class="notes">
+     <p>
+      All six runs use the same three deterministic traffic scenes. Both methods optimize a six-second first lane change. The coupled method selects a future transition jointly; the baseline freezes its short plan before selecting the future gap.
+     </p>
+     <p>
+      Future transition time is a coarse planning result. Collision checks cover only the detailed six seconds at 0.02 s resolution. The combined objective trades reference-speed tracking, control effort, transition timing, and gap centering; it is not a published benchmark score.
+     </p>
+    </div>
+    <figure class="figure">
+     <img alt="Comparison of the recreated planner settings across three car scenes" height="450" loading="lazy" src="assets/evaluation.svg" width="1200"/>
+     <figcaption>
+      Generated from the committed evaluation data. All values describe this recreation.
+     </figcaption>
+    </figure>
+   </section>
+   <section class="section wrap" id="reproduce">
+    <div class="section-head">
+     <h2>
+      Run the planner and inspect the results
+     </h2>
+     <p>
+      A self-contained Python package, deterministic examples, numerical checks, and a static website. No external assets or account are required to view the demonstration.
+     </p>
+    </div>
+    <div class="reproduce-grid">
+     <div class="terminal">
+      <pre><code>python -m venv .venv
+source .venv/bin/activate
+python -m pip install -e '.[dev]'
+python -m highway_planning.experiment
+python scripts/plot_results.py
+python -m pytest -q
+python -m http.server 8000 --directory docs</code></pre>
+     </div>
+     <div>
+      <p>
+       Run these commands from the repository root after cloning or extracting the source archive. Open
+       <a href="http://localhost:8000">
+        localhost:8000
+       </a>
+       to view the page.
+      </p>
+      <p>
+       Python 3.9–3.12 is recommended for the pinned reproduction environment. The exported data ships with the repository, so viewing the page does not require running the optimizer. Solve times depend on the machine and solver versions.
+      </p>
+      <div class="actions">
+       <a class="button primary" download="" href="assets/source.zip">
+        Download full source
+       </a>
+       <a class="button" href="https://github.com/RudolfReiter/highway-lane-planning">
+        Browse repository ↗
+       </a>
+      </div>
+     </div>
+    </div>
+    <div class="citation">
+     <h3>
+      Cite the research
+     </h3>
+     <p>
+      Rudolf Reiter, Armin Nurkanović, Daniele Bernardini, Moritz Diehl, Alberto Bemporad. A Long-Short-Term Mixed-Integer Formulation for Highway Lane Change Planning. IEEE Transactions on Intelligent Vehicles 9(11), 7514–7528 (2024).
+      <a href="https://doi.org/10.1109/TIV.2024.3398805">
+       doi:10.1109/TIV.2024.3398805
+      </a>
+      .
+     </p>
+     <p>
+      Software and new figures: MIT license. The original paper retains its own publication license. This repository contains a new implementation and does not redistribute the paper.
+     </p>
+    </div>
+   </section>
+  </main>
+  <footer class="footer wrap">
+   <span>
+    Independent recreation · 2024 research
+   </span>
+   <div>
+    <a href="https://publications.syscop.de/Reiter2024.pdf">
+     Paper
+    </a>
+    <a href="https://github.com/RudolfReiter/highway-lane-planning">
+     Source
+    </a>
+    <a href="data/summary.json">
+     Data
+    </a>
+   </div>
+  </footer>
+  <noscript>
+   <p class="noscript">
+    Enable JavaScript for the interactive scene. The evaluation figure, source archive, and paper links remain available.
+   </p>
+  </noscript>
+  <script src="data/experiment.js">
+  </script>
+  <script src="scene.js">
+  </script>
+  <script src="app.js">
+  </script>
+ </body>
+</html>

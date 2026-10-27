@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "Please cite the original paper when using this recreation."
+type: software
+title: "Long–Short Lane Planning — recreated implementation"
+version: 0.1.0
+license: MIT
+repository-code: "https://github.com/RudolfReiter/highway-lane-planning"
+authors:
+  - family-names: Reiter
+    given-names: Rudolf
+preferred-citation:
+  type: article
+  title: "A Long-Short-Term Mixed-Integer Formulation for Highway Lane Change Planning"
+  doi: "10.1109/TIV.2024.3398805"
+  year: 2024
+  authors:
+    - family-names: "Reiter"
+      given-names: "Rudolf"
+    - family-names: "Nurkanović"
+      given-names: "Armin"
+    - family-names: "Bernardini"
+      given-names: "Daniele"
+    - family-names: "Diehl"
+      given-names: "Moritz"
+    - family-names: "Bemporad"
+      given-names: "Alberto"
